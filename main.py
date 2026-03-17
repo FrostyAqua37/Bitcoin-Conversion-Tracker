@@ -1,5 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
+import re
 
 exchange_rates: dict[str, str] = dict()
 indices: list[str] = []
@@ -9,32 +10,33 @@ def html_content(url:str) -> object:
     soup = BeautifulSoup(page.text, 'html.parser')
     return soup
 
-def get_conversion_table(table:object) -> list[str]:
-    return table.find_all('span', class_ = 'pull-right')[8:]
+def get_conversion_table(table:object) -> object:
+    return table.find_all('div', class_ = 'col-full-flex')[2]
 
-def remove_html(content:list[str]) -> list[str]:
-    new_list:list[str] = []
+def get_exchange_rates(exchange_table:object) -> list[str]:
+    #Finds all exchange rate between all currencies
+    values = exchange_table.find_all('span', class_ = 'pull-right')
+    values = [value.text.replace('\xa0', ' ') for value in values] #Removes any HTML tags and creates space between code and currency value
+    return [value.split(' ')[3].strip() for value in values]
 
-    for row in content:
-        new_list.append(row.text.strip())
+def get_currency_name(exchange_table:object) -> list[str]:
+    #Finds every <a> tag in given table
+    country_code = exchange_table.find_all('a', href = True)
+    country_code = [code.text.strip() for code in country_code] #Removes tags and any blank spaces at each end.
 
-    return new_list
+    return [code.split('-')[1].strip() for code in country_code] #Splits at '-' and only returns currency name.
 
-def get_exchange_rates(table:list[str]):
-    for row in table:
-        try:
-            country, rate = row.split('\xa0')
+def remove_tags(html_content:object) -> list[str]:
+    ...
 
-            exchange_rates[country] = rate
-        except:
-            indices.append(row)
+def format_text(text_content:list[str]) -> list[str]:
+    ...
+
 
 def main():
     html_page = html_content('https://bitcoinlive.org/')
-    exchange_table = get_conversion_table(html_page)
-    exchange_table = remove_html(exchange_table)
-    get_exchange_rates(exchange_table)
-
+    conversion_table = get_conversion_table(html_page)
+    currency_name = get_currency_name(conversion_table)
 
 
 if __name__ == '__main__':
